@@ -1,0 +1,28 @@
+app:
+    resource: '@AppBundle/Controller/'
+    type: annotation
+
+task_index:
+    path:     /
+    defaults: { _controller: AppBundle:Default:index }
+    methods:  [GET]
+
+task_detail:
+    path:     /task/detail/{taskId}
+    defaults: { _controller: AppBundle:Default:detail }
+    methods:  [GET]
+
+task_create:
+    path:     /task/create
+    defaults: { _controller: AppBundle:Default:create }
+    methods:  [POST]
+    
+task_update:
+    path:     /task/update
+    defaults: { _controller: AppBundle:Default:update }
+    methods:  [POST]
+
+task_delete:
+    path:     /task/delete
+    defaults: { _controller: AppBundle:Default:delete }
+    methods:  [POST]

@@ -1,0 +1,259 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+
+<style type="text/css">
+	.add_task_row { text-align: right; margin-bottom: 20px; }
+	.task_edit { cursor: pointer; }
+	.task_del { color: red; cursor: pointer; }
+</style>
+
+{% endblock %}
+
+{% block body %}        
+	<div id="tasklist" class="container">
+		<div class="row">
+			<div class="col">
+				
+				<div class="panel panel-default" id="error_msg" style="display:none">
+					<div class="panel-body bg-danger">
+						<div class="msg"></div>
+					</div>
+				</div>
+				
+				<div id="task_index">									
+					<div class="panel panel-default">
+						<div class="panel-heading">Task Index</div>
+						<div class="panel-body">
+								
+							<div class="row">
+								<div class="add_task_row col-md-12">				
+									<input id="new_task" type="button" value="Add New Task" />
+								</div>
+							</div>
+							
+							<div class="row">
+								<div class="col">
+									<table class="table table-striped">
+										<thead>
+											<tr>
+												<th style="width: 40%">Task Name</th>
+												<th style="width: 20%">Task Priority</th>												
+												<th style="width: 20%">Updated</th>
+												<th style="width: 20%">Actions</th>
+											</tr>
+										</thead>
+										<tbody>
+											{% for task in tasks %}
+											<tr>
+												<td>{{ task.task_name }}</td>
+												<td>{{ task.priority }}</td>
+												<td>{{ task.updated_at }}</td>
+												<td>
+													
+													<span rel="{{ task.id }}" class="glyphicon glyphicon-edit task_edit" aria-hidden="true" alt="Edit"></span> 
+													
+													<span rel="{{ task.id }}" class="glyphicon glyphicon-remove task_del" aria-hidden="true" alt="Delete"></span> 
+												</td>
+											</tr>
+											{% endfor %}
+										</tbody>
+									</table>									
+								</div>
+							</div>
+							
+						</div>
+					</div>
+				</div>
+				
+				<div id="task_addedit" style="display:none">									
+					<div class="panel panel-default">
+						<div class="panel-heading">Add / Edit Task</div>
+						<div class="panel-body">
+							<div class="row">
+								<div class="col-md-12">
+									<div class="form-group">
+										<label for="task_name">Task Name</label>
+										<input type="text" name="task_name" class="form-control" />
+									</div>
+									<div class="form-group">
+										<label for="priority">Task Priority</label>
+										<select class="form-control" name="priority">
+											<option value="low">Low</option>
+											<option value="medium">Medium</option>
+											<option value="high">High</option>
+										</select>										
+									</div>
+									<input style="display: none" type="text" name="task_id" />
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-md-12 text-right">
+									<button class="cancel-addedit btn btn-default">Cancel</button>
+									<button class="show-add btn btn-success">Save</button>
+									<button class="show-update btn btn-success">Update</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>			
+		</div>		
+	</div>
+{% endblock %}
+
+{% block javascripts %}
+	{{ parent() }}
+
+	<script type="text/javascript">
+		$(document).ready(function(){
+			$("#new_task").click(function(){
+				
+				// Clear input fields
+				$("#task_addedit input[name='task_id']").val("");
+				$("#task_addedit input[name='task_name']").val("");
+				$("#task_addedit select[name='priority']").val("low");				
+				
+				
+				$("#task_addedit .panel-heading").html("Add Task");
+				$("#task_addedit .show-add").show();
+				$("#task_addedit .show-update").hide();
+				
+				render("task_addedit");
+			});
+			
+			$(".task_edit").click(function(){				
+				var taskid = $(this).attr('rel');
+				
+				// Get task details
+				$.ajax({
+					url:"{{ app.request.baseUrl }}/task/detail/"+taskid, 
+					method:"GET",
+					dataType:"json"
+				}).done(function(data){
+					$("#task_addedit input[name='task_id']").val(taskid);
+					$("#task_addedit input[name='task_name']").val(data.task_name);
+					$("#task_addedit select[name='priority']").val(data.priority);
+				});
+				
+				$("#task_addedit .panel-heading").html("Edit Task");
+				render("task_addedit");
+				$("#task_addedit .show-add").hide();
+				$("#task_addedit .show-update").show();
+			});
+			
+			$(".task_del").click(function(){
+				var taskid = $(this).attr('rel');
+				
+				if (confirm("Are you sure you want to delete this task?"))
+				{
+					var postfields = {
+						id:taskid
+					};
+				
+					// Post to add route
+					if (postfields.id != "")
+					{
+						$.post("{{ app.request.baseUrl }}/task/delete", postfields,
+							function(returndata){								
+								if (returndata.status === true)
+								{
+									location.reload(true);
+								}
+								else
+								{
+									set_error("Deletion failed.");
+								}
+							},"json"
+						);				
+					}
+				}
+			});
+			
+			$("#task_addedit .show-add").click(function(){
+				// Get data from fields
+				var postfields = {
+					id:0,
+					task_name:$("#task_addedit input[name='task_name']").val(),
+					priority:$("#task_addedit select[name='priority']").val()
+				};
+				
+				// Post to add route
+				if (postfields.task_name != "")
+				{
+					$.post("{{ app.request.baseUrl }}/task/create", postfields,
+						function(returndata){							
+							if (returndata.status === true)
+							{
+								location.reload(true);
+							}
+							else
+							{
+								set_error("Failed to add record.");
+							}
+						},"json"
+					);				
+				}
+				else
+				{
+					alert("Please enter a Task Name.");
+				}
+			});
+			
+			$("#task_addedit .show-update").click(function(){
+				// Get data from fields
+				var postfields = {
+					id:$("#task_addedit input[name='task_id']").val(),
+					task_name:$("#task_addedit input[name='task_name']").val(),
+					priority:$("#task_addedit select[name='priority']").val()
+				};				
+				
+				// Post to edit route
+				if (postfields.task_name != "")
+				{
+					$.post("{{ app.request.baseUrl }}/task/update", postfields,
+						function(returndata){
+							if (returndata.status === true)
+							{
+								location.reload(true);
+							}
+							else
+							{
+								set_error("Failed to update record.");
+							}
+						},"json"
+					);
+				}
+				else
+				{
+					alert("Please enter a Task Name.");
+				}
+			});
+			
+			$("#task_addedit .cancel-addedit").click(function(){
+				// Return to index view
+				render("task_index");
+			});
+		});
+		
+		function render(view){
+			clear_messages();
+			$("#task_index").hide();
+			$("#task_addedit").hide();
+			
+			$("#"+view).show();
+		}
+		
+		function set_error(errormsg){
+			$("#error_msg .msg").html(errormsg);
+			$("#error_msg").show();
+		}
+		
+		function clear_messages(){
+			$("#error_msg .msg").html("");
+			$("#error_msg").hide();
+		}
+		
+	</script>
+{% endblock %}
